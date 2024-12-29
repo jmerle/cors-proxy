@@ -9,6 +9,15 @@ import { NodeSDK } from '@opentelemetry/sdk-node';
 
 diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
 
+function isUrl(value) {
+  try {
+    new URL(value);
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
 function replacePrivacySensitiveSpanAttributes(span) {
   for (const [attribute, value] of Object.entries(span.attributes)) {
     if (attribute === 'http.url' || attribute === 'http.target' || isIP(value) !== 0) {
@@ -22,6 +31,8 @@ register('@opentelemetry/instrumentation/hook.mjs', import.meta.url);
 new NodeSDK({
   instrumentations: [
     new HttpInstrumentation({
+      ignoreIncomingRequestHook: req => !isUrl(req.url.substring(1)),
+      requireParentforOutgoingSpans: true,
       applyCustomAttributesOnSpan: replacePrivacySensitiveSpanAttributes,
     }),
   ],
